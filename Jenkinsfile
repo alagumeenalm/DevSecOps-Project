@@ -1,11 +1,10 @@
-
 pipeline {
-  def myImage
   agent { label 'build' }
-   environment { 
-        registry = "ngozin/devsecops-project" 
-        registryCredential = 'dockerhub' 
-   }
+
+  environment { 
+    registry = "ngozin/devsecops-project" 
+    registryCredential = 'dockerhub' 
+  }
 
   stages {
     stage('Checkout') {
@@ -13,39 +12,45 @@ pipeline {
         git branch: 'main', credentialsId: 'GitHubToken', url: 'https://github.com/Ngozi-N/DevSecOps-Project.git'
       }
     }
-  
-   stage('Stage I: Build') {
+
+    stage('Stage I: Build') {
       steps {
         echo "Building Jar Component ..."
-        sh "export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64; mvn clean package "
+        sh "export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64; mvn clean package"
       }
     }
 
-   stage('Stage II: Code Coverage ') {
+    stage('Stage II: Code Coverage') {
       steps {
-	    echo "Running Code Coverage ..."
+        echo "Running Code Coverage ..."
         sh "export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64; mvn jacoco:report"
       }
     }
 
-   stage('Stage III: SCA') {
-      steps { 
+    stage('Stage III: SCA') {
+      steps {
         echo "Running Software Composition Analysis using OWASP Dependency-Check ..."
         sh "export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64; mvn org.owasp:dependency-check-maven:check"
       }
     }
 
-   stage('Stage IV: SAST') {
-      steps { 
+    stage('Stage IV: SAST') {
+      steps {
         echo "Running Static application security testing using SonarQube Scanner ..."
         withSonarQubeEnv('mysonarqube') {
-            sh 'mvn sonar:sonar -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml -Dsonar.dependencyCheck.jsonReportPath=target/dependency-check-report.json -Dsonar.dependencyCheck.htmlReportPath=target/dependency-check-report.html -Dsonar.projectName=devsecops-project'
-       }
+          sh '''
+            mvn sonar:sonar \
+              -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml \
+              -Dsonar.dependencyCheck.jsonReportPath=target/dependency-check-report.json \
+              -Dsonar.dependencyCheck.htmlReportPath=target/dependency-check-report.html \
+              -Dsonar.projectName=devsecops-project
+          '''
+        }
       }
     }
 
-   stage('Stage V: QualityGates') {
-      steps { 
+    stage('Stage V: QualityGates') {
+      steps {
         echo "Running Quality Gates to verify the code quality"
         script {
           timeout(time: 1, unit: 'MINUTES') {
@@ -53,38 +58,37 @@ pipeline {
             if (qg.status != 'OK') {
               error "Pipeline aborted due to quality gate failure: ${qg.status}"
             }
-           }
+          }
         }
       }
     }
-   
-   stage('Stage VI: Build Image') {
-      steps { 
+
+    stage('Stage VI: Build Image') {
+      steps {
         echo "Build Docker Image"
         script {
-          myImage = docker.build(registry)
+          def myImage = docker.build(registry)
           docker.withRegistry('', registryCredential) {
             myImage.push()
           }
         }
       }
     }
-        
-   stage('Stage VII: Scan Image ') {
-      steps { 
+
+    stage('Stage VII: Scan Image') {
+      steps {
         echo "Scanning Image for Vulnerabilities"
         sh "trivy image --scanners vuln --offline-scan ngozin/devsecops-project:latest > trivyresults.txt"
-        }
+      }
     }
-          
-   stage('Stage VIII: Smoke Test ') {
-      steps { 
+
+    stage('Stage VIII: Smoke Test') {
+      steps {
         echo "Smoke Test the Image"
         sh "docker run -d --name smokerun -p 8080:8080 ngozin/devsecops-project"
         sh "sleep 90; ./check.sh"
         sh "docker rm --force smokerun"
-        }
+      }
     }
-
   }
 }
