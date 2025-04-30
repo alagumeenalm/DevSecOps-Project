@@ -1,5 +1,6 @@
 
 pipeline {
+  def myImage
   agent { label 'build' }
    environment { 
         registry = "ngozin/devsecops-project" 
@@ -61,10 +62,10 @@ pipeline {
       steps { 
         echo "Build Docker Image"
         script {
-               docker.withRegistry( '', registryCredential ) { 
-                 myImage = docker.build registry
-                 myImage.push()
-                }
+          myImage = docker.build(registry)
+          docker.withRegistry('', registryCredential) {
+            myImage.push()
+          }
         }
       }
     }
