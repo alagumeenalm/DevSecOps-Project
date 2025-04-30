@@ -90,16 +90,11 @@ pipeline {
         script {
           def tag = "${BUILD_NUMBER}"
           echo "Triggering CD Pipeline with image tag: ${tag}"
-
-          def cdJobName = 'devsecop-cd-pipeline'
-          if (Jenkins.instance.getItemByFullName(cdJobName)) {
-            build wait: false, job: cdJobName, parameters: [
-              password(name: 'PASSWD', value: params.PASSWD),
-              string(name: 'IMAGETAG', value: tag)
-            ]
-          } else {
-            error "CD pipeline '${cdJobName}' not found. Please check the job name."
-          }
+    
+          build wait: false, job: 'devsecop-cd-pipeline', parameters: [
+            password(name: 'PASSWD', value: params.PASSWD),
+            string(name: 'IMAGETAG', value: tag)
+          ]
         }
       }
     }
