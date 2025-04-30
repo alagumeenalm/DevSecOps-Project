@@ -49,7 +49,7 @@ pipeline {
       }
     }
 
-    stage('Stage V: Quality Gates') {
+    stage('Stage V: QualityGates') {
       steps {
         echo "Running Quality Gates to verify the code quality"
         script {
