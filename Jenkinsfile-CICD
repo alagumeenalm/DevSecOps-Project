@@ -85,9 +85,18 @@ pipeline {
    stage('Stage IX: Trigger Deployment'){
       steps { 
        script {
-        TAG = "$BUILD_NUMBER"
-         echo "Trigger CD Pipeline"
-          build wait: false, job: 'springboot-cd-pipeline', parameters: [password(name: 'PASSWD', description: 'Please Enter your Gitlab password', value: params.PASSWD),string(name: 'IMAGETAG', value: TAG)]
+        def tag = "${BUILD_NUMBER}"
+        echo "Triggering CD Pipeline with image tag: ${tag}"
+
+        def cdJobName = 'devsecop-cd-pipeline' // ✅ replace with your actual job name
+        if (Jenkins.instance.getItemByFullName(cdJobName)) {
+          build wait: false, job: cdJobName, parameters: [
+            password(name: 'PASSWD', value: params.PASSWD),
+            string(name: 'IMAGETAG', value: tag)
+          ]
+        } else {
+          error "CD pipeline '${cdJobName}' not found. Please check the job name."
+        }
        }
       }
     }
