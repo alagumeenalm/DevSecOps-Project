@@ -132,7 +132,7 @@ public class DefaultDriverService implements DriverService
 
     private DriverDO findDriverChecked(Long driverId) throws EntityNotFoundException
     {
-        DriverDO driverDO = driverRepository.findOne(driverId);
+        DriverDO driverDO = driverRepository.findById(driverId).orElse(null);
         if (driverDO == null)
         {
             throw new EntityNotFoundException("Could not find entity with id: " + driverId);
