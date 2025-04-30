@@ -2,6 +2,7 @@ pipeline {
   agent { label 'build' }
 
   environment { 
+    JAVA_HOME = '/usr/lib/jvm/java-17-openjdk-amd64'
     registry = "ngozin/devsecops-project"
     registryCredential = 'dockerhub'
   }
@@ -15,7 +16,7 @@ pipeline {
       steps {
         git branch: 'main', credentialsId: 'GitHubToken', url: 'https://github.com/Ngozi-N/DevSecOps-Project.git'
         echo "Building Jar Component ..."
-        sh "export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64; mvn clean package"
+        sh "export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64; mvn clean package"
       }
     }
 
