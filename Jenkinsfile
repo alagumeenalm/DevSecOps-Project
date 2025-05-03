@@ -11,7 +11,7 @@ pipeline {
   stages {
     stage('Checkout') {
       steps {
-        git url: 'https://github.com/chiomanwanedo/DevSecOps-Project.git', branch: 'main', credentialsId: github
+        git url: 'https://github.com/chiomanwanedo/DevSecOps-Project.git', branch: 'main', credentialsId: "${GITHUB_CREDENTIAL_ID}"
       }
     }
 
@@ -45,7 +45,7 @@ pipeline {
       steps {
         script {
           def appImage = docker.build("${IMAGE_NAME}:${IMAGE_TAG}")
-          docker.withRegistry('', docker) {
+          docker.withRegistry('', "${DOCKER_CREDENTIAL_ID}") {
             appImage.push()
           }
         }
@@ -62,6 +62,12 @@ pipeline {
       steps {
         writeFile file: 'image-tag.txt', text: IMAGE_TAG
         archiveArtifacts artifacts: 'image-tag.txt', fingerprint: true
+      }
+    }
+
+    stage('Trigger CD Pipeline') {
+      steps {
+        build job: 'DevSecOps-Project-CD'
       }
     }
   }
