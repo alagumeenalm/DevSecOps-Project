@@ -36,7 +36,13 @@ pipeline {
     stage('Quality Gate') {
       steps {
         timeout(time: 1, unit: 'MINUTES') {
-          waitForQualityGate abortPipeline: true
+          script {
+            def qualityGate = waitForQualityGate()
+            echo "SonarQube Quality Gate status: ${qualityGate.status}"
+            if (qualityGate.status != 'OK') {
+              error "Build failed due to SonarQube Quality Gate: ${qualityGate.status}"
+            }
+          }
         }
       }
     }
@@ -58,8 +64,9 @@ pipeline {
       }
     }
 
-    stage('Archive Image Info') {
+    stage('Archive Reports') {
       steps {
+        archiveArtifacts artifacts: 'trivy-results.txt, target/site/**/*', allowEmptyArchive: true
         writeFile file: 'image-tag.txt', text: IMAGE_TAG
         archiveArtifacts artifacts: 'image-tag.txt', fingerprint: true
       }
