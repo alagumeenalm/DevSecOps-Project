@@ -1,10 +1,3 @@
-environment {
-  IMAGE_NAME = 'chiomanwanedo/devsecops-app'
-  IMAGE_TAG = "v${BUILD_NUMBER}"
-  DOCKER_CREDENTIAL_ID = 'dockerhub'
-  GITHUB_CREDENTIAL_ID = 'github'
-}
-
 stage('Build') {
   steps {
     sh 'mvn clean package'
@@ -40,8 +33,8 @@ stage('Quality Gate') {
 stage('Build & Push Docker Image') {
   steps {
     script {
-      def appImage = docker.build("${IMAGE_NAME}:${IMAGE_TAG}")
-      docker.withRegistry('', "${DOCKER_CREDENTIAL_ID}") {
+      def appImage = docker.build("chiomanwanedo/devsecops-app:${BUILD_NUMBER}")
+      docker.withRegistry('', 'dockerhub') {
         appImage.push()
       }
     }
@@ -50,20 +43,22 @@ stage('Build & Push Docker Image') {
 
 stage('Scan Image with Trivy') {
   steps {
-    sh "trivy image ${IMAGE_NAME}:${IMAGE_TAG} > trivy-results.txt || true"
+    sh "trivy image chiomanwanedo/devsecops-app:${BUILD_NUMBER} > trivy-results.txt || true"
   }
 }
 
 stage('Archive Reports') {
   steps {
     archiveArtifacts artifacts: 'trivy-results.txt, target/site/**/*', allowEmptyArchive: true
-    writeFile file: 'image-tag.txt', text: IMAGE_TAG
+    writeFile file: 'image-tag.txt', text: "${BUILD_NUMBER}"
     archiveArtifacts artifacts: 'image-tag.txt', fingerprint: true
   }
 }
 
 stage('Trigger CD Pipeline') {
   steps {
-    build job: 'DevSecOps-Project-CD'
+    build job: 'DevSecOps-Project-CD', parameters: [
+      string(name: 'IMAGE_TAG', value: "${BUILD_NUMBER}")
+    ]
   }
 }
