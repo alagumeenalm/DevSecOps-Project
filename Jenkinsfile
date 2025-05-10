@@ -4,14 +4,16 @@ pipeline {
   environment {
     IMAGE_NAME = 'chiomanwanedo/devsecops-app'
     IMAGE_TAG = "v${BUILD_NUMBER}"
-    DOCKER_CREDENTIAL_ID = 'docker' // Jenkins DockerHub credentials ID
-    SONARQUBE_SERVER = 'sonarqube'  // Must match your SonarQube server config name in Jenkins
+    DOCKER_CREDENTIAL_ID = 'docker'
+    SONARQUBE_SERVER = 'sonarqube'
   }
 
   stages {
     stage('Checkout') {
       steps {
-        git url: 'https://github.com/chiomanwanedo/DevSecOps-Project.git', branch: 'main'
+        git url: 'https://github.com/chiomanwanedo/DevSecOps-Project.git',
+            branch: 'main',
+            credentialsId: 'github' // <-- Your GitHub credentials ID in Jenkins
       }
     }
 
