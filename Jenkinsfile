@@ -4,7 +4,7 @@ pipeline {
   environment {
     IMAGE_NAME = 'chiomanwanedo/devsecops-app'
     IMAGE_TAG = "v${BUILD_NUMBER}"
-    DOCKER_CREDENTIAL_ID = 'dockerhub'
+    DOCKER_CREDENTIAL_ID = 'docker'
     SONARQUBE_SERVER = 'sonarqube'
   }
 
@@ -19,12 +19,12 @@ pipeline {
       steps {
         withSonarQubeEnv("${SONARQUBE_SERVER}") {
           withCredentials([string(credentialsId: 'sonarqube', variable: 'SONAR_TOKEN')]) {
-            sh '''
+            sh """
               mvn sonar:sonar \
                 -Dsonar.projectKey=devsecops-project \
                 -Dsonar.login=$SONAR_TOKEN \
                 -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
-            '''
+            """
           }
         }
       }
