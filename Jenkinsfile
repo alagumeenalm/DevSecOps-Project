@@ -18,11 +18,14 @@ pipeline {
     stage('SonarQube Analysis') {
       steps {
         withSonarQubeEnv("${SONARQUBE_SERVER}") {
-          sh '''
-            mvn sonar:sonar \
-              -Dsonar.projectKey=devsecops-project \
-              -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
-          '''
+          withCredentials([string(credentialsId: 'sonarqube', variable: 'SONAR_TOKEN')]) {
+            sh '''
+              mvn sonar:sonar \
+                -Dsonar.projectKey=devsecops-project \
+                -Dsonar.login=$SONAR_TOKEN \
+                -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
+            '''
+          }
         }
       }
     }
