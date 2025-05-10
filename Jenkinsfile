@@ -9,11 +9,15 @@ pipeline {
   }
 
   stages {
+    stage('Clean Workspace') {
+      steps {
+        deleteDir() // This will clean the workspace before pulling new code
+      }
+    }
+
     stage('Checkout') {
       steps {
-        git url: 'https://github.com/chiomanwanedo/DevSecOps-Project.git',
-            branch: 'main',
-            credentialsId: 'github' // <-- Your GitHub credentials ID in Jenkins
+        git url: 'https://github.com/chiomanwanedo/DevSecOps-Project.git', branch: 'main'
       }
     }
 
