@@ -5,7 +5,7 @@ pipeline {
     IMAGE_NAME = 'chiomanwanedo/devsecops-app'
     IMAGE_TAG = "v${BUILD_NUMBER}"
     DOCKER_CREDENTIAL_ID = 'docker'
-    SONARQUBE_SERVER = 'sonarqube' // Must match Jenkins' SonarQube server name
+    SONARQUBE_SERVER = 'sonarqube' // Must match the name in Jenkins global tool configuration
   }
 
   stages {
@@ -15,7 +15,7 @@ pipeline {
       }
     }
 
-    stage('SonarQube Analysis and Quality Gate') {
+    stage('SonarQube Analysis') {
       steps {
         withSonarQubeEnv("${SONARQUBE_SERVER}") {
           withCredentials([string(credentialsId: 'sonarqube', variable: 'SONAR_TOKEN')]) {
@@ -26,8 +26,14 @@ pipeline {
                 -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
             '''
           }
+        }
+      }
+    }
 
-          timeout(time: 2, unit: 'MINUTES') {
+    stage('Quality Gate') {
+      steps {
+        timeout(time: 2, unit: 'MINUTES') {
+          withSonarQubeEnv("${SONARQUBE_SERVER}") {
             script {
               def qualityGate = waitForQualityGate()
               echo "SonarQube Quality Gate status: ${qualityGate.status}"
