@@ -4,19 +4,14 @@ pipeline {
   environment {
     IMAGE_NAME = 'chiomanwanedo/devsecops-app'
     IMAGE_TAG = "v${BUILD_NUMBER}"
-    DOCKER_CREDENTIAL_ID = 'docker'
-    SONARQUBE_SERVER = 'sonarqube'
+    DOCKER_CREDENTIAL_ID = 'docker' // Jenkins DockerHub credentials ID
+    SONARQUBE_SERVER = 'sonarqube'  // Must match your SonarQube server config name in Jenkins
   }
 
   stages {
-    stage('Clean Workspace') {
-      steps {
-        deleteDir() // This will clean the workspace before pulling new code
-      }
-    }
-
     stage('Checkout') {
       steps {
+        deleteDir() // 🧹 Clean workspace to prevent Git errors
         git url: 'https://github.com/chiomanwanedo/DevSecOps-Project.git', branch: 'main'
       }
     }
