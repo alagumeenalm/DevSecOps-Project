@@ -4,8 +4,8 @@ pipeline {
   environment {
     IMAGE_NAME = 'chiomanwanedo/devsecops-app'
     IMAGE_TAG = "v${BUILD_NUMBER}"
-    DOCKER_CREDENTIAL_ID = 'docker'
-    SONARQUBE_SERVER = 'sonarqube'
+    DOCKER_CREDENTIAL_ID = 'docker'       // DockerHub creds in Jenkins
+    SONARQUBE_SERVER = 'sonarqube'        // Jenkins SonarQube config name
   }
 
   stages {
@@ -16,7 +16,7 @@ pipeline {
       }
     }
 
-    stage('Build') {
+    stage('Build with Maven') {
       steps {
         sh 'mvn clean package'
       }
@@ -24,7 +24,7 @@ pipeline {
 
     stage('SonarQube Analysis') {
       steps {
-        withSonarQubeEnv(SONARQUBE_SERVER) {
+        withSonarQubeEnv("${SONARQUBE_SERVER}") {
           withCredentials([string(credentialsId: 'sonarqube', variable: 'SONAR_TOKEN')]) {
             sh '''
               mvn sonar:sonar \
@@ -37,23 +37,31 @@ pipeline {
       }
     }
 
-    stage('Build & Push Docker Image') {
+    stage('Docker Build & Push') {
+      agent {
+        docker {
+          image 'docker:24.0.6-dind'   // DinD agent with Docker daemon
+          args '--privileged'          // Needed to run Docker daemon inside
+        }
+      }
       steps {
-        script {
-          def appImage = docker.build("${IMAGE_NAME}:${IMAGE_TAG}")
-          docker.withRegistry('', DOCKER_CREDENTIAL_ID) {
-            appImage.push()
-          }
+        sh 'dockerd-entrypoint.sh & sleep 10'
+        sh 'docker version'
+
+        withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDENTIAL_ID}", usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+          sh """
+            docker build -t $IMAGE_NAME:$IMAGE_TAG .
+            echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+            docker push $IMAGE_NAME:$IMAGE_TAG
+          """
         }
       }
     }
 
-    stage('Scan Image with Trivy') {
+    stage('Scan with Trivy') {
       steps {
-        sh """
-          trivy image ${IMAGE_NAME}:${IMAGE_TAG} > trivy-results.txt || true
-          cat trivy-results.txt
-        """
+        sh "trivy image $IMAGE_NAME:$IMAGE_TAG > trivy-results.txt || true"
+        sh "cat trivy-results.txt"
       }
     }
 
@@ -83,7 +91,7 @@ pipeline {
             echo "SonarQube Quality Gate: ${qualityGate.status}"
           }
         } catch (err) {
-          echo "Quality Gate check skipped or failed: ${err.getMessage()}"
+          echo "Quality Gate skipped or failed: ${err.getMessage()}"
         }
       }
     }
