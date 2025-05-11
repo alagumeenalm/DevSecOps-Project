@@ -8,8 +8,8 @@ pipeline {
   environment {
     IMAGE_NAME = 'chiomanwanedo/devsecops-app'
     IMAGE_TAG = "v${BUILD_NUMBER}"
-    DOCKER_CREDENTIAL_ID = 'docker'        // Jenkins credential ID for DockerHub
-    SONARQUBE_SERVER = 'sonarqube'         // Jenkins configured SonarQube name
+    DOCKER_CREDENTIAL_ID = 'docker'
+    SONARQUBE_SERVER = 'sonarqube'
   }
 
   stages {
@@ -41,7 +41,7 @@ pipeline {
       }
     }
 
-    stage('Build & Push Docker Image') {
+    stage('Docker Build & Push') {
       steps {
         withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDENTIAL_ID}", usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
           sh """
@@ -60,7 +60,7 @@ pipeline {
       }
     }
 
-    stage('Archive Reports') {
+    stage('Archive Artifacts') {
       steps {
         archiveArtifacts artifacts: 'trivy-results.txt, target/site/**/*', allowEmptyArchive: true
         writeFile file: 'image-tag.txt', text: IMAGE_TAG
