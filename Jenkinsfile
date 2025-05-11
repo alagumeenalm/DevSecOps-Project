@@ -1,9 +1,5 @@
 pipeline {
-  agent {
-    docker {
-      image 'chiomavee/jenkins-agent:latest'
-    }
-  }
+  agent none
 
   environment {
     IMAGE_NAME = 'chiomanwanedo/devsecops-app'
@@ -14,20 +10,22 @@ pipeline {
 
   stages {
     stage('Checkout') {
+      agent any
       steps {
         deleteDir()
         git url: 'https://github.com/chiomanwanedo/DevSecOps-Project.git', branch: 'main'
       }
     }
 
-    stage('Build with Maven') {
+    stage('Build & Analyze') {
+      agent {
+        docker {
+          image 'chiomavee/jenkins-agent:latest'
+        }
+      }
       steps {
         sh 'mvn clean package'
-      }
-    }
 
-    stage('SonarQube Analysis') {
-      steps {
         withSonarQubeEnv("${SONARQUBE_SERVER}") {
           withCredentials([string(credentialsId: 'sonarqube', variable: 'SONAR_TOKEN')]) {
             sh '''
@@ -41,7 +39,12 @@ pipeline {
       }
     }
 
-    stage('Docker Build & Push') {
+    stage('Build & Push Docker Image') {
+      agent {
+        docker {
+          image 'chiomavee/jenkins-agent:latest'
+        }
+      }
       steps {
         withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDENTIAL_ID}", usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
           sh """
@@ -54,22 +57,24 @@ pipeline {
     }
 
     stage('Scan with Trivy') {
+      agent {
+        docker {
+          image 'chiomavee/jenkins-agent:latest'
+        }
+      }
       steps {
         sh "trivy image $IMAGE_NAME:$IMAGE_TAG > trivy-results.txt || true"
         sh "cat trivy-results.txt"
       }
     }
 
-    stage('Archive Artifacts') {
+    stage('Archive Reports & Trigger CD') {
+      agent any
       steps {
         archiveArtifacts artifacts: 'trivy-results.txt, target/site/**/*', allowEmptyArchive: true
         writeFile file: 'image-tag.txt', text: IMAGE_TAG
         archiveArtifacts artifacts: 'image-tag.txt', fingerprint: true
-      }
-    }
 
-    stage('Trigger CD Pipeline') {
-      steps {
         build job: 'DevSecOps-Project-CD', parameters: [
           string(name: 'IMAGE_TAG', value: IMAGE_TAG)
         ]
