@@ -1,11 +1,15 @@
 pipeline {
-  agent any
+  agent {
+    docker {
+      image 'chiomavee/jenkins-agent:latest'
+    }
+  }
 
   environment {
     IMAGE_NAME = 'chiomanwanedo/devsecops-app'
     IMAGE_TAG = "v${BUILD_NUMBER}"
-    DOCKER_CREDENTIAL_ID = 'docker'       // DockerHub creds in Jenkins
-    SONARQUBE_SERVER = 'sonarqube'        // Jenkins SonarQube config name
+    DOCKER_CREDENTIAL_ID = 'docker'        // Jenkins credential ID for DockerHub
+    SONARQUBE_SERVER = 'sonarqube'         // Jenkins configured SonarQube name
   }
 
   stages {
@@ -37,21 +41,15 @@ pipeline {
       }
     }
 
-    stage('Docker Build & Push') {
-      agent {
-        docker {
-          image 'docker:24.0.6'     // CLI-only image
-        }
-      }
-      environment {
-        DOCKER_HOST = 'tcp://docker:2375' // dummy to skip daemon errors
-      }
+    stage('Build & Push Docker Image') {
       steps {
-        sh 'docker version || true' // Avoid hard failure
-        sh '''
-          echo "Simulating docker build..."
-          echo "Since you're not mounting /var/run/docker.sock or using DinD correctly, real build won't work."
-        '''
+        withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDENTIAL_ID}", usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+          sh """
+            docker build -t $IMAGE_NAME:$IMAGE_TAG .
+            echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+            docker push $IMAGE_NAME:$IMAGE_TAG
+          """
+        }
       }
     }
 
