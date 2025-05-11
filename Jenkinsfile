@@ -4,14 +4,14 @@ pipeline {
   environment {
     IMAGE_NAME = 'chiomanwanedo/devsecops-app'
     IMAGE_TAG = "v${BUILD_NUMBER}"
-    DOCKER_CREDENTIAL_ID = 'docker' // Jenkins DockerHub credentials ID
-    SONARQUBE_SERVER = 'sonarqube'  // Must match your SonarQube server config name in Jenkins
+    DOCKER_CREDENTIAL_ID = 'docker'
+    SONARQUBE_SERVER = 'sonarqube'
   }
 
   stages {
     stage('Checkout') {
       steps {
-        deleteDir() // 🧹 Clean workspace to prevent Git errors
+        deleteDir()
         git url: 'https://github.com/chiomanwanedo/DevSecOps-Project.git', branch: 'main'
       }
     }
@@ -24,7 +24,7 @@ pipeline {
 
     stage('SonarQube Analysis') {
       steps {
-        withSonarQubeEnv("${SONARQUBE_SERVER}") {
+        withSonarQubeEnv(SONARQUBE_SERVER) {
           withCredentials([string(credentialsId: 'sonarqube', variable: 'SONAR_TOKEN')]) {
             sh '''
               mvn sonar:sonar \
@@ -41,7 +41,7 @@ pipeline {
       steps {
         script {
           def appImage = docker.build("${IMAGE_NAME}:${IMAGE_TAG}")
-          docker.withRegistry('', "${DOCKER_CREDENTIAL_ID}") {
+          docker.withRegistry('', DOCKER_CREDENTIAL_ID) {
             appImage.push()
           }
         }
@@ -50,14 +50,17 @@ pipeline {
 
     stage('Scan Image with Trivy') {
       steps {
-        sh "trivy image ${IMAGE_NAME}:${IMAGE_TAG} > trivy-results.txt || true"
+        sh """
+          trivy image ${IMAGE_NAME}:${IMAGE_TAG} > trivy-results.txt || true
+          cat trivy-results.txt
+        """
       }
     }
 
     stage('Archive Reports') {
       steps {
         archiveArtifacts artifacts: 'trivy-results.txt, target/site/**/*', allowEmptyArchive: true
-        writeFile file: 'image-tag.txt', text: "${IMAGE_TAG}"
+        writeFile file: 'image-tag.txt', text: IMAGE_TAG
         archiveArtifacts artifacts: 'image-tag.txt', fingerprint: true
       }
     }
@@ -65,7 +68,7 @@ pipeline {
     stage('Trigger CD Pipeline') {
       steps {
         build job: 'DevSecOps-Project-CD', parameters: [
-          string(name: 'IMAGE_TAG', value: "${IMAGE_TAG}")
+          string(name: 'IMAGE_TAG', value: IMAGE_TAG)
         ]
       }
     }
@@ -80,7 +83,7 @@ pipeline {
             echo "SonarQube Quality Gate: ${qualityGate.status}"
           }
         } catch (err) {
-          echo "Could not get Quality Gate result or it failed: ${err.getMessage()}"
+          echo "Quality Gate check skipped or failed: ${err.getMessage()}"
         }
       }
     }
