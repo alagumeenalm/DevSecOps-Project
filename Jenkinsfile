@@ -1,31 +1,33 @@
 pipeline {
-  agent none
+  agent {
+    docker {
+      image 'chiomavee/jenkins-agent:latest'
+    }
+  }
 
   environment {
     IMAGE_NAME = 'chiomanwanedo/devsecops-app'
     IMAGE_TAG = "v${BUILD_NUMBER}"
-    DOCKER_CREDENTIAL_ID = 'docker'
-    SONARQUBE_SERVER = 'sonarqube'
+    DOCKER_CREDENTIAL_ID = 'docker'         // Jenkins credential ID for DockerHub
+    SONARQUBE_SERVER = 'sonarqube'           // Jenkins configured SonarQube name
   }
 
   stages {
     stage('Checkout') {
-      agent any
       steps {
         deleteDir()
         git url: 'https://github.com/chiomanwanedo/DevSecOps-Project.git', branch: 'main'
       }
     }
 
-    stage('Build & Analyze') {
-      agent {
-        docker {
-          image 'chiomavee/jenkins-agent:latest'
-        }
-      }
+    stage('Build with Maven') {
       steps {
         sh 'mvn clean package'
+      }
+    }
 
+    stage('SonarQube Analysis') {
+      steps {
         withSonarQubeEnv("${SONARQUBE_SERVER}") {
           withCredentials([string(credentialsId: 'sonarqube', variable: 'SONAR_TOKEN')]) {
             sh '''
@@ -40,11 +42,6 @@ pipeline {
     }
 
     stage('Build & Push Docker Image') {
-      agent {
-        docker {
-          image 'chiomavee/jenkins-agent:latest'
-        }
-      }
       steps {
         withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDENTIAL_ID}", usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
           sh """
@@ -57,24 +54,27 @@ pipeline {
     }
 
     stage('Scan with Trivy') {
-      agent {
-        docker {
-          image 'chiomavee/jenkins-agent:latest'
-        }
-      }
       steps {
-        sh "trivy image $IMAGE_NAME:$IMAGE_TAG > trivy-results.txt || true"
+        sh "trivy image --exit-code 1 --severity HIGH,CRITICAL $IMAGE_NAME:$IMAGE_TAG > trivy-results.txt"
         sh "cat trivy-results.txt"
+        script {
+          if (sh(script: 'echo $?', returnStdout: true).trim() == '1') {
+            error "High or critical vulnerabilities found by Trivy!"
+          }
+        }
       }
     }
 
-    stage('Archive Reports & Trigger CD') {
-      agent any
+    stage('Archive Reports') {
       steps {
         archiveArtifacts artifacts: 'trivy-results.txt, target/site/**/*', allowEmptyArchive: true
         writeFile file: 'image-tag.txt', text: IMAGE_TAG
         archiveArtifacts artifacts: 'image-tag.txt', fingerprint: true
+      }
+    }
 
+    stage('Trigger CD Pipeline') {
+      steps {
         build job: 'DevSecOps-Project-CD', parameters: [
           string(name: 'IMAGE_TAG', value: IMAGE_TAG)
         ]
@@ -89,6 +89,9 @@ pipeline {
           timeout(time: 2, unit: 'MINUTES') {
             def qualityGate = waitForQualityGate()
             echo "SonarQube Quality Gate: ${qualityGate.status}"
+            if (qualityGate.status == 'FAILED') {
+              error "SonarQube Quality Gate failed!"
+            }
           }
         } catch (err) {
           echo "Quality Gate skipped or failed: ${err.getMessage()}"
