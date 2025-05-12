@@ -2,7 +2,7 @@ pipeline {
   agent {
     docker {
       image 'carlossg/maven-docker:3.9.6-eclipse-temurin-17'
-      args '-v /var/run/docker.sock:/var/run/docker.sock'
+      args '-u root -v /var/run/docker.sock:/var/run/docker.sock'
     }
   }
 
@@ -45,11 +45,11 @@ pipeline {
     stage('Build & Push Docker Image') {
       steps {
         withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDENTIAL_ID}", usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-          sh """
+          sh '''
             docker build -t $IMAGE_NAME:$IMAGE_TAG .
             echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
             docker push $IMAGE_NAME:$IMAGE_TAG
-          """
+          '''
         }
       }
     }
