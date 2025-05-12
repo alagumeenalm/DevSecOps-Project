@@ -1,7 +1,7 @@
 pipeline {
   agent {
     docker {
-      image 'maven:3.9.6-eclipse-temurin-17'
+      image 'carlossg/maven-docker:3.9.6-eclipse-temurin-17'
       args '-v /var/run/docker.sock:/var/run/docker.sock'
     }
   }
@@ -27,7 +27,50 @@ pipeline {
       }
     }
 
-    // ... other stages remain unchanged
+    stage('SonarQube Analysis') {
+      steps {
+        withSonarQubeEnv("${SONARQUBE_SERVER}") {
+          withCredentials([string(credentialsId: 'sonarqube', variable: 'SONAR_TOKEN')]) {
+            sh '''
+              mvn sonar:sonar \
+                -Dsonar.projectKey=devsecops-project \
+                -Dsonar.login=$SONAR_TOKEN \
+                -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
+            '''
+          }
+        }
+      }
+    }
+
+    stage('Build & Push Docker Image') {
+      steps {
+        withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDENTIAL_ID}", usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+          sh """
+            docker build -t $IMAGE_NAME:$IMAGE_TAG .
+            echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+            docker push $IMAGE_NAME:$IMAGE_TAG
+          """
+        }
+      }
+    }
+
+    stage('Scan with Trivy') {
+      steps {
+        sh "trivy image $IMAGE_NAME:$IMAGE_TAG > trivy-results.txt || true"
+        sh "cat trivy-results.txt"
+      }
+    }
+
+    stage('Archive & Trigger CD') {
+      steps {
+        archiveArtifacts artifacts: 'trivy-results.txt, target/site/**/*', allowEmptyArchive: true
+        writeFile file: 'image-tag.txt', text: IMAGE_TAG
+        archiveArtifacts artifacts: 'image-tag.txt', fingerprint: true
+        build job: 'DevSecOps-Project-CD', parameters: [
+          string(name: 'IMAGE_TAG', value: IMAGE_TAG)
+        ]
+      }
+    }
   }
 
   post {
