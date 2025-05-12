@@ -2,6 +2,8 @@ pipeline {
   agent {
     docker {
       image 'chiomavee/jenkins-agent:latest'
+      // Optional: Explicitly define workspace volumes (may not be necessary but can help in some cases)
+      // args '-v /var/jenkins_home/workspace/${JOB_NAME}@libs:/var/jenkins_home/workspace/${JOB_NAME}@libs -v /var/jenkins_home/workspace/${JOB_NAME}@tmp:/var/jenkins_home/workspace/${JOB_NAME}@tmp'
     }
   }
 
@@ -16,7 +18,21 @@ pipeline {
     stage('Checkout') {
       steps {
         deleteDir()
-        git url: 'https://github.com/chiomanwanedo/DevSecOps-Project.git', branch: 'main'
+        script {
+          echo "Current working directory: $(pwd)"
+          echo "Listing files before clone:"
+          sh 'ls -al'
+          echo "Checking if git is available:"
+          sh 'which git'
+          echo "Cloning repository..."
+          sh "git clone https://github.com/chiomanwanedo/DevSecOps-Project.git ."
+          echo "Listing files after clone:"
+          sh 'ls -al'
+          echo "Checking out main branch..."
+          sh "git checkout main"
+          echo "Verifying remote URL:"
+          sh "git remote -v"
+        }
       }
     }
 
