@@ -1,10 +1,5 @@
 pipeline {
-  agent {
-    docker {
-      image 'carlossg/maven:3.9.6-eclipse-temurin-17'
-      args '-u root -v /var/run/docker.sock:/var/run/docker.sock'
-    }
-  }
+  agent any
 
   environment {
     IMAGE_NAME = 'chiomanwanedo/devsecops-app'
