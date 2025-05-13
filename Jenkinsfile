@@ -3,58 +3,66 @@ pipeline {
 
   environment {
     IMAGE_NAME = 'chiomanwanedo/devsecops-app'
-    GITHUB_CREDENTIAL_ID = 'github'
+    IMAGE_TAG = "v${BUILD_NUMBER}"
+    DOCKER_CREDENTIAL_ID = 'dockerhub'
+    SONARQUBE_SERVER = 'sonarqube' // Must match Jenkins SonarQube server name
   }
 
   stages {
-    stage('Checkout GitOps Repo') {
+    stage('Checkout') {
       steps {
-        git url: 'https://github.com/chiomanwanedo/DevSecOps-Project-CD.git', branch: 'main', credentialsId: GITHUB_CREDENTIAL_ID
+        git url: 'https://github.com/chiomanwanedo/DevSecOps-Project.git', branch: 'main', credentialsId: 'github'
       }
     }
 
-    stage('Download Image Tag from CI') {
+    stage('Build App') {
       steps {
-        copyArtifacts(
-          projectName: 'DevSecOps-Project',
-          selector: lastSuccessful(),
-          filter: 'image-tag.txt',
-          target: '.'
-        )
-        sh 'cat image-tag.txt' // Optional debug line
+        sh 'mvn clean package'
       }
     }
 
-    stage('Update Kubernetes Manifest') {
+    stage('SonarQube Analysis') {
+      steps {
+        withSonarQubeEnv("${SONARQUBE_SERVER}") {
+          withCredentials([string(credentialsId: 'sonarqube', variable: 'SONAR_TOKEN')]) {
+            sh '''
+              mvn sonar:sonar \
+                -Dsonar.projectKey=devsecops-project \
+                -Dsonar.login=$SONAR_TOKEN \
+                -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
+            '''
+          }
+        }
+      }
+    }
+
+    stage('Build & Push Docker Image') {
       steps {
         script {
-          def tag = readFile('image-tag.txt').trim()
-          sh """
-            sed -i 's|image: ${IMAGE_NAME}:.*|image: ${IMAGE_NAME}:${tag}|' kubernetes/deployment.yml
-          """
+          def appImage = docker.build("${IMAGE_NAME}:${IMAGE_TAG}")
+          docker.withRegistry('', "${DOCKER_CREDENTIAL_ID}") {
+            appImage.push()
+          }
         }
       }
     }
 
-    stage('Commit & Push Changes') {
+    stage('Save Image Tag') {
       steps {
-        withCredentials([usernamePassword(credentialsId: GITHUB_CREDENTIAL_ID, usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
-          sh '''
-            git config user.name "chiomanwanedo"
-            git config user.email "chiomavanessa8@gmail.com"
-            git add image-tag.txt kubernetes/deployment.yml
-            git commit -m "Update image tag for deployment"
-            git push https://$GIT_USER:$GIT_PASS@github.com/chiomanwanedo/DevSecOps-Project-CD.git main
-          '''
+        script {
+          writeFile file: 'image-tag.txt', text: "${IMAGE_TAG}"
+          archiveArtifacts artifacts: 'image-tag.txt'
         }
       }
     }
+  }
 
-    // Optional: Sync with ArgoCD if GitOps is used
-    // stage('Sync ArgoCD') {
-    //   steps {
-    //     sh 'argocd app sync your-app-name --insecure --grpc-web'
-    //   }
-    // }
+  post {
+    failure {
+      echo '❌ CI pipeline failed.'
+    }
+    success {
+      echo '✅ CI pipeline completed successfully.'
+    }
   }
 }
