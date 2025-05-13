@@ -4,7 +4,8 @@ pipeline {
   environment {
     IMAGE_NAME = 'chiomanwanedo/devsecops-app'
     IMAGE_TAG = "v${BUILD_NUMBER}"
-    DOCKER_CREDENTIAL_ID = 'docker'
+    DOCKER_CREDENTIAL_ID = 'dockerhub'
+    SONARQUBE_SERVER = 'sonarqube' // Must match Jenkins global config name
   }
 
   stages {
@@ -17,6 +18,21 @@ pipeline {
     stage('Build App') {
       steps {
         sh 'mvn clean package'
+      }
+    }
+
+    stage('SonarQube Analysis') {
+      steps {
+        withSonarQubeEnv("${SONARQUBE_SERVER}") {
+          withCredentials([string(credentialsId: 'sonarqube', variable: 'SONAR_TOKEN')]) {
+            sh '''
+              mvn sonar:sonar \
+                -Dsonar.projectKey=devsecops-project \
+                -Dsonar.login=$SONAR_TOKEN \
+                -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
+            '''
+          }
+        }
       }
     }
 
