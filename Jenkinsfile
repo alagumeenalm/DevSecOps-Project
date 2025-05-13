@@ -2,10 +2,10 @@ pipeline {
   agent any
 
   environment {
-    IMAGE_NAME = 'chiomavee/devsecops-app'
+    IMAGE_NAME = 'chiomavee/devsecops-app'   // ✅ Your actual Docker Hub repo
     IMAGE_TAG = "v${BUILD_NUMBER}"
-    DOCKER_CREDENTIAL_ID = 'docker'
-    SONARQUBE_SERVER = 'sonarqube'
+    DOCKER_CREDENTIAL_ID = 'docker'          // Jenkins credential ID for Docker Hub
+    SONARQUBE_SERVER = 'sonarqube'           // Jenkins SonarQube server name
   }
 
   stages {
