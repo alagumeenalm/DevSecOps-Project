@@ -2,7 +2,7 @@ pipeline {
   agent any
 
   environment {
-    IMAGE_NAME = 'chiomanwanedo/devsecops-app'
+    IMAGE_NAME = 'chiomavee/devsecops-app'
     IMAGE_TAG = "v${BUILD_NUMBER}"
     DOCKER_CREDENTIAL_ID = 'docker'
     SONARQUBE_SERVER = 'sonarqube'
