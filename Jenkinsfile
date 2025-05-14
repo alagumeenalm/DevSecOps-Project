@@ -4,7 +4,7 @@ pipeline {
   environment {
     IMAGE_NAME = 'chiomanwanedo/devsecops-app'
     IMAGE_TAG = "v${BUILD_NUMBER}"
-    DOCKER_CREDENTIAL_ID = 'dockerhub'
+    DOCKER_CREDENTIAL_ID = 'docker'
     SONARQUBE_SERVER = 'sonarqube' // Must match Jenkins SonarQube server name
   }
 
