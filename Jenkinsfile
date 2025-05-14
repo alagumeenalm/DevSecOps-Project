@@ -5,19 +5,22 @@ pipeline {
     IMAGE_NAME = 'chiomanwanedo/devsecops-app'
     IMAGE_TAG = "v${BUILD_NUMBER}"
     DOCKER_CREDENTIAL_ID = 'docker'
-    SONARQUBE_SERVER = 'sonarqube' // Must match Jenkins SonarQube server name
+    GITHUB_CREDENTIAL_ID = 'github'
+    SONARQUBE_SERVER = 'sonarqube'
   }
 
   stages {
     stage('Checkout') {
       steps {
-        git url: 'https://github.com/chiomanwanedo/DevSecOps-Project.git', branch: 'main', credentialsId: 'github'
+        git url: 'https://github.com/chiomanwanedo/DevSecOps-Project.git',
+            branch: 'main',
+            credentialsId: "${GITHUB_CREDENTIAL_ID}"
       }
     }
 
     stage('Build App') {
       steps {
-        sh 'mvn clean package'
+        sh 'mvn clean verify'
       }
     }
 
@@ -49,20 +52,24 @@ pipeline {
 
     stage('Save Image Tag') {
       steps {
-        script {
-          writeFile file: 'image-tag.txt', text: "${IMAGE_TAG}"
-          archiveArtifacts artifacts: 'image-tag.txt'
-        }
+        writeFile file: 'image-tag.txt', text: "${IMAGE_TAG}"
+        archiveArtifacts artifacts: 'image-tag.txt'
+      }
+    }
+
+    stage('Trigger CD Pipeline') {
+      steps {
+        build job: 'DevSecOps-Project-CD' // Make sure this matches your actual CD job name
       }
     }
   }
 
   post {
+    success {
+      echo '✅ CI pipeline completed successfully and CD triggered.'
+    }
     failure {
       echo '❌ CI pipeline failed.'
-    }
-    success {
-      echo '✅ CI pipeline completed successfully.'
     }
   }
 }
