@@ -1,8 +1,7 @@
 pipeline {
   agent any
 
-  environment { 
-    JAVA_HOME = '/usr/lib/jvm/java-17-openjdk-amd64'
+  environment {
     registry = "alagumeenalm/devsecops-app"
     registryCredential = 'docker'
   }
@@ -12,21 +11,21 @@ pipeline {
       steps {
         git branch: 'main', credentialsId: 'GitHubToken', url: 'https://github.com/alagumeenalm/DevSecOps-Project.git'
         echo "Building Jar Component ..."
-        sh "export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64; mvn clean package"
+        sh 'mvn clean package'
       }
     }
 
     stage('Stage II: Code Coverage') {
       steps {
         echo "Running Code Coverage ..."
-        sh "export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64; mvn jacoco:report"
+        sh 'mvn jacoco:report'
       }
     }
 
     stage('Stage III: SCA') {
       steps {
         echo "Running Software Composition Analysis using OWASP Dependency-Check ..."
-        sh "export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64; mvn org.owasp:dependency-check-maven:check"
+        sh 'mvn org.owasp:dependency-check-maven:check'
       }
     }
 
