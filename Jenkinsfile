@@ -11,20 +11,20 @@ pipeline {
   stages {
     stage('Checkout') {
       steps {
-        git url: 'https://github.com/alagumeenalm/DevSecOps-Project.git', branch: 'main', credentialsId: 'github_credential'
+        git url: 'https://github.com/alagumeenalm/DevSecOps-Project.git', branch: 'main', credentialsId: 'github_credentials'
       }
     }
 
     stage('Build App') {
       steps {
-        sh 'mvn verify'
+        sh 'mvn clean package'
       }
     }
 
     stage('SonarQube Analysis') {
       steps {
         withSonarQubeEnv("${SONARQUBE_SERVER}") {
-          withCredentials([string(credentialsId: 'sonarqube', variable: 'SONAR_TOKEN')]) {
+          withCredentials([string(credentialsId: 'sonarqube_credentials', variable: 'SONAR_TOKEN')]) {
             sh '''
               mvn sonar:sonar \
                 -Dsonar.projectKey=devsecops-project \
