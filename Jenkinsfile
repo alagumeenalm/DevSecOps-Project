@@ -6,11 +6,7 @@ pipeline {
     registry = "alagumeenalm/devsecops-app"
     registryCredential = 'docker'
   }
-
- # parameters {
-  #  password(name: 'PASSWD', defaultValue: '', description: 'Please Enter your GitHub Personal Access Token')
-  #}
-
+  
   stages {
     stage('Stage I: Build') {
       steps {
