@@ -3,18 +3,18 @@ pipeline {
 
   environment { 
     JAVA_HOME = '/usr/lib/jvm/java-17-openjdk-amd64'
-    registry = "ngozin/devsecops-project"
-    registryCredential = 'dockerhub'
+    registry = "alagumeenalm/devsecops-app"
+    registryCredential = 'docker'
   }
 
-  parameters {
-    password(name: 'PASSWD', defaultValue: '', description: 'Please Enter your GitHub Personal Access Token')
-  }
+ # parameters {
+  #  password(name: 'PASSWD', defaultValue: '', description: 'Please Enter your GitHub Personal Access Token')
+  #}
 
   stages {
     stage('Stage I: Build') {
       steps {
-        git branch: 'main', credentialsId: 'GitHubToken', url: 'https://github.com/Ngozi-N/DevSecOps-Project.git'
+        git branch: 'main', credentialsId: 'GitHubToken', url: 'https://github.com/alagumeenalm/DevSecOps-Project.git'
         echo "Building Jar Component ..."
         sh "export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64; mvn clean package"
       }
@@ -37,7 +37,7 @@ pipeline {
     stage('Stage IV: SAST') {
       steps {
         echo "Running Static application security testing using SonarQube Scanner ..."
-        withSonarQubeEnv('mysonarqube') {
+        withSonarQubeEnv('sonarqube') {
           sh 'mvn sonar:sonar -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml -Dsonar.dependencyCheck.jsonReportPath=target/dependency-check-report.json -Dsonar.dependencyCheck.htmlReportPath=target/dependency-check-report.html -Dsonar.projectName=devsecops-project'
         }
       }
