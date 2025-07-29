@@ -11,7 +11,7 @@ pipeline {
   stages {
     stage('Checkout') {
       steps {
-        git url: 'https://github.com/alagumeenalm/DevSecOps-Project.gi', branch: 'main', credentialsId: 'github_credential'
+        git url: 'https://github.com/alagumeenalm/DevSecOps-Project.git', branch: 'main', credentialsId: 'github_credential'
       }
     }
 
