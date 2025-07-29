@@ -2,7 +2,7 @@ pipeline {
   agent any
 
   environment {
-    IMAGE_NAME = 'chiomavee/devsecops-app'
+    IMAGE_NAME = 'alagumeenalm/devsecops-app'
     IMAGE_TAG = "v${BUILD_NUMBER}"
     DOCKER_CREDENTIAL_ID = 'docker'
     SONARQUBE_SERVER = 'sonarqube'
@@ -11,7 +11,7 @@ pipeline {
   stages {
     stage('Checkout') {
       steps {
-        git url: 'https://github.com/chiomanwanedo/DevSecOps-Project.git', branch: 'main', credentialsId: 'github'
+        git url: 'https://github.com/alagumeenalm/DevSecOps-Project.gi', branch: 'main', credentialsId: 'github_credential'
       }
     }
 
